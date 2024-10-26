@@ -1,5 +1,3 @@
-# This mod REQUIRES FederAPI. You can download it here: https://github.com/itayfeder/FederAPI-Balatro
-
 ![image](https://github.com/itayfeder/MusicalSuit/assets/24474796/3642751d-8065-4581-8106-4bf8603e25bd)
 
 Musical suit is a mod that adds a deck containing a new suit to the game: Notes! ♪

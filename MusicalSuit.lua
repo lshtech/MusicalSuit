@@ -1,256 +1,216 @@
 --- STEAMODDED HEADER
 --- MOD_NAME: Musical Suit
 --- MOD_ID: MusicalSuit
---- MOD_AUTHOR: [itayfeder]
+--- MOD_AUTHOR: [itayfeder, elbe]
 --- MOD_DESCRIPTION: This mod add Notes suit.
+--- PREFIX: music
+--- PRIORITY: 10
 
 ----------------------------------------------
 ------------MOD CODE -------------------------
+--- Sprites
+SMODS.Atlas { key = 'lc_cards', path = '8BitDeck.png', px = 71, py = 95 }
+SMODS.Atlas { key = 'hc_cards', path = '8BitDeck_opt2.png', px = 71, py = 95 }
+SMODS.Atlas { key = 'lc_ui', path = 'ui_assets.png', px = 18, py = 18 }
+SMODS.Atlas { key = 'hc_ui', path = 'ui_assets_opt2.png', px = 18, py = 18 }
+SMODS.Atlas { key = 'crystal_tuning_fork', path = 'j_crystal_tuning_fork.png', px = 71, py = 95 }
+SMODS.Atlas { key = 'prideful_joker', path = 'j_prideful_joker.png', px = 71, py = 95 }
+SMODS.Atlas { key = 'eclipse', path = 'c_eclipse_tarot.png', px = 71, py = 95 }
+SMODS.Atlas { key = 'Blind', path = 'BlindChips.png', px = 34, py = 34, frames = 21, atlas_table = 'ANIMATION_ATLAS' }
+SMODS.Atlas { key = 'modicon', path = 'ui_assets.png', px = 18, py = 18 }
+SMODS.Atlas { key = 'Decks', path = 'b_musical.png', px = 71, py = 95 }
 
-local NOTE_SUIT_SYMBOL = nil
-local NOTE_SUIT_INDEX = nil
-local NOTE_SUIT_VALUE = nil
-
-
-function add_notes_if_not_found()
-    local has_notes = false
-    for k,v in pairs(SMODS.Card.SUIT_LIST) do
-        if v == NOTE_SUIT_VALUE then
-            has_notes = true
-        end
+local function allow_suits(self, args)
+    if args and args.initial_deck and six_suits_mod then
+        return six_suits_mod.config.allow_all_suits
     end
-
-    if not has_notes then
-        table.insert(SMODS.Card.SUIT_LIST, NOTE_SUIT_INDEX, NOTE_SUIT_VALUE)
-    end
+    return true
 end
 
+local notes_suit = SMODS.Suit {
+    key = 'Notes',
+    card_key = 'NOTE',
+    hc_atlas = 'hc_cards',
+    lc_atlas = 'lc_cards',
+    hc_ui_atlas = 'hc_ui',
+    lc_ui_atlas = 'lc_ui',
+    pos = { y = 0 },
+    ui_pos = { x = 0, y = 0 },
+    hc_colour = HEX('D61BAF'),
+    lc_colour = HEX('D61BAF'),
+    in_pool = allow_suits,
+    loc_txt = {
+        singular = 'Note',
+        plural = 'Notes',
+    },
+}
 
-local start_runref = Game.start_run;
-function Game:start_run(args)
-    local new_args = args or {}
-
-    local saveTable = args.savetext or nil
-    local selected_back = saveTable and saveTable.BACK.name or (args.challenge and args.challenge.deck and args.challenge.deck.type) or (self.GAME.viewed_back and self.GAME.viewed_back.name) or self.GAME.selected_back and self.GAME.selected_back.name or 'Red Deck'
-    selected_back = Back(get_deck_from_name(selected_back))
-    
-    if not selected_back.effect.config.musical then
-        new_args.challenge = {}
-        if args.challenge then
-            new_args.challenge = args.challenge
-        end
-    
-        new_args.challenge.deck = {}
-        if args.challenge.deck then
-            new_args.challenge.deck = args.challenge.deck
-        end
-    
-        new_args.challenge.deck.no_suits = {}
-        if args.challenge.deck.no_suits then
-            new_args.challenge.deck.no_suits = args.challenge.deck.no_suits
-        end
-    
-        new_args.challenge.deck.no_suits[NOTE_SUIT_SYMBOL] = true
-        table.remove(SMODS.Card.SUIT_LIST, NOTE_SUIT_INDEX)
-
-        new_args.challenge.restrictions = {}
-        if args.challenge.restrictions then
-            new_args.challenge.restrictions = args.challenge.restrictions
-        end
-    
-        new_args.challenge.restrictions.banned_cards = {}
-        if args.challenge.restrictions.banned_cards then
-            new_args.challenge.restrictions.banned_cards = args.challenge.restrictions.banned_cards
-        end
-        table.insert(new_args.challenge.restrictions.banned_cards, {id = "j_prideful_joker"})
-        table.insert(new_args.challenge.restrictions.banned_cards, {id = "j_crystal_tuning_fork"})
-        table.insert(new_args.challenge.restrictions.banned_cards, {id = "c_eclipse_tarot"})
-    else
-        add_notes_if_not_found()
-    end
-
-    sendDebugMessage("PLAYED SOUND")
-    start_runref(self, new_args)
-end
-
-
--- local main_menuref = Game.main_menu;
--- function Game:main_menu(change_context)
---     -- add_notes_if_not_found()
---     main_menuref(self, change_context)
--- end
-
-
-local get_new_bossef = get_new_boss;
-function get_new_boss()
-    local new_boss = get_new_bossef()
-    local selected_back = Back(get_deck_from_name(G.GAME.selected_back and G.GAME.selected_back.name or 'Red Deck'))
-    if not selected_back.effect.config.musical then
-        while new_boss == "bl_deaf" do
-            new_boss = get_new_bossef()
-        end
-    end
-    return new_boss
-end
-
-
-local clickref = Card.click;
-function Card:click(change_context)
-    if self.base.suit == "Notes" then
-        pitch = 0.5 + 0.1 * self.base.id
-        modded_play_sound('note', true, 0.75, pitch)
-    end
-    clickref(self)
-end
-
-
-local calculate_jokerref = Card.calculate_joker;
-function Card:calculate_joker(context)
-    local val = calculate_jokerref(self, context)
-    if self.ability.set == "Joker" and not self.debuff then
-        if context.individual then
-            if context.cardarea == G.play then
-                if self.ability.name ==  'Crystal Tuning Fork' and
-                context.other_card:is_suit("Notes") and 
-                pseudorandom('crystal_tuning_fork') < G.GAME.probabilities.normal/self.ability.extra.odds then
-                    if #G.consumeables.cards + G.GAME.consumeable_buffer < G.consumeables.config.card_limit then
-                        G.GAME.consumeable_buffer = G.GAME.consumeable_buffer + 1
-                        G.E_MANAGER:add_event(Event({
-                            trigger = 'before',
-                            delay = 0.0,
-                            func = (function()
-                                    local card = create_card('Tarot',G.consumeables, nil, nil, nil, nil, nil, '8ba')
-                                    card:add_to_deck()
-                                    G.consumeables:emplace(card)
-                                    G.GAME.consumeable_buffer = 0
-                                return true
-                            end)}))
-                        card_eval_status_text(self, 'extra', nil, nil, nil, {message = localize('k_plus_tarot'), colour = G.C.PURPLE})
-                    end
-                    return {
-                        card = self
-                    }
-                end
-            end
-        end
-    end
-    return val
-end
-
-
-function SMODS.INIT.MusicalSuit()
-    local mod_id = "MusicalSuit"
-    local musical_suit_mod = SMODS.findModByID(mod_id)
-    SMODS.Sprite:new(mod_id .. "cards1", musical_suit_mod.path, '8BitDeck.png', 71, 95, 'asset_atli'):register()
-    SMODS.Sprite:new(mod_id .. "cards2", musical_suit_mod.path, '8BitDeck_opt2.png', 71, 95, 'asset_atli'):register()
-    SMODS.Sprite:new(mod_id .. "ui1", musical_suit_mod.path, 'ui_assets.png', 18, 18, 'asset_atli'):register()
-    SMODS.Sprite:new(mod_id .. "ui2", musical_suit_mod.path, 'ui_assets_opt2.png', 18, 18, 'asset_atli'):register()
-    SMODS.Card:new_suit('Notes', mod_id .. "cards1", mod_id .. "cards2", { y = 0 }, mod_id .. "ui1", mod_id .. "ui2", { x = 0, y = 0 }, 'D61BAF', 'D61BAF')
-
-    loc_colour("mult", nil)
-    G.ARGS.LOC_COLOURS["notes"] = G.C.SUITS.Notes
-
-    local index={}
-    for k,v in pairs(SMODS.Card.SUIT_LIST) do
-       index[v]=k
-    end
-    NOTE_SUIT_VALUE = "Notes"
-    NOTE_SUIT_INDEX = index["Notes"]
-
-    for k,v in pairs(G.P_CARDS) do
-        if v.suit == "Notes" then
-            NOTE_SUIT_SYMBOL = string.sub(k, 1, 1)
-        end
-    end
-
-
-
-    -- Prideful Joker
-    local prideful_joker_def = {
+SMODS.Joker {
+    key = 'prideful_joker',
+    loc_txt = {
         name = "Prideful Joker",
         text = {
             "Played cards with",
             "{C:notes}Note{} suit give",
             "{C:mult}+4{} Mult when scored"
         }
-    }
-
-    local prideful_joker = SMODS.Joker:new("Prideful Joker", "prideful_joker", {
-        effect = "Suit Mult", extra = {s_mult = 4, suit = 'Notes'}, blueprint_compat = true, eternal_compat = true
-    }, { x = 0, y = 0 }, prideful_joker_def, 1, 5)
-    SMODS.Sprite:new("j_prideful_joker", musical_suit_mod.path, "j_prideful_joker.png", 71, 95, "asset_atli"):register();
-    prideful_joker:register()
-
-
-    
-    -- Crystal Tuning Fork
-    local crystal_tuning_fork_def = {
+    },
+    config = {
+        effect = "Suit Mult",
+        extra = {s_mult = 4, suit = notes_suit.key}
+    },
+    atlas = 'prideful_joker',
+    pos = { x = 0, y = 0 },
+    rarity = 1,
+    cost = 5,
+    unlocked = true,
+    discovered = false,
+    loc_vars = function(self, info_queue, card)
+        return {
+            vars = { }
+        }
+    end
+}
+SMODS.Joker {
+    key = 'crystal_tuning_fork',
+    loc_txt = {
         name = "Crystal Tuning Fork",
         text = {
-            "{C:green}1 in 5{} chance for",
+            "{C:green}#1# in #2#{} chance for",
             "played cards with",
             "{C:notes}Note{} suit to create",
             "a {C:purple}Tarot{} card when scored"
         }
-    }
-
-    local crystal_tuning_fork = SMODS.Joker:new("Crystal Tuning Fork", "crystal_tuning_fork", {
-        extra = {odds = 3, Xmult = 2}, blueprint_compat = true, eternal_compat = true, unlock_condition = {type = 'modify_deck', extra = {count = 30, suit = 'Notes'}}
-    }, { x = 0, y = 0 }, crystal_tuning_fork_def, 2, 7, false, false)
-    SMODS.Sprite:new("j_crystal_tuning_fork", musical_suit_mod.path, "j_crystal_tuning_fork.png", 71, 95, "asset_atli"):register();
-    crystal_tuning_fork:register()
-
-
-
-    -- Musical Deck
-    local musical_deck_def = {
-        ["name"]="Musical Deck",
-        ["text"]={
-            [1]="Start with a Deck",
-            [2]="containing some ",
-            [3]="{C:notes}Notes{} suit cards"
-        },
-    }
-    
-    local musical_deck = SMODS.Deck:new("Musical Deck", "musical", {musical = true, atlas = "b_musical"}, {x = 0, y = 0}, musical_deck_def)
-    SMODS.Sprite:new("b_musical", musical_suit_mod.path, "b_musical.png", 71, 95, "asset_atli"):register();
-    musical_deck:register()
-
-
-
-    --- Note Sounds
-    register_sound("note", musical_suit_mod.path, "note.ogg")
-
-
-
-    --- Deaf Blind
-    local deaf_blind_def = {
-        ["name"]="The Deaf",
-        ["text"]={
-            [1]="All Note cards",
-            [2]="are debuffed"
-        },
-    }
-    local deaf_blind = SMODS.Blind:new("The Deaf", "deaf", deaf_blind_def, 5, 2, {}, {suit = 'Notes'}, {x=0, y=0}, {min = 1, max = 10}, HEX('D61BAF'), true, mod_id .. "blinds")
-    SMODS.Sprite:new(mod_id .. "blinds", musical_suit_mod.path, 'BlindChips.png', 34, 34, 'animation_atli', 21):register()
-    deaf_blind:register()
-
-
-
-    -- Eclipse Tarot
-    local eclipse_tarot_def = {
+    },
+    config = {
+        extra = {odds = 3, Xmult = 2}
+    },
+    atlas = 'crystal_tuning_fork',
+    pos = { x = 0, y = 0 },
+    rarity = 2,
+    cost = 7,
+    unlocked = false,
+    discovered = false,
+    unlock_condition = {type = 'modify_deck', extra = {count = 30, suit = notes_suit.key}},
+    loc_vars = function(self, info_queue, card)
+        return {
+            vars = {
+                G.GAME.probabilities.normal,
+                card.ability.extra.odds, }
+        }
+    end,
+    calculate = function(self, card, context)
+        if context.individual and context.cardarea == G.play and context.other_card:is_suit(notes_suit.key) and pseudorandom('crystal_tuning_fork') < G.GAME.probabilities.normal/card.ability.extra.odds then
+            if #G.consumeables.cards + G.GAME.consumeable_buffer < G.consumeables.config.card_limit then
+                G.GAME.consumeable_buffer = G.GAME.consumeable_buffer + 1
+                G.E_MANAGER:add_event(Event({
+                    trigger = 'before',
+                    delay = 0.0,
+                    func = (function()
+                            local new_card = create_card('Tarot',G.consumeables, nil, nil, nil, nil, nil, '8ba')
+                            new_card:add_to_deck()
+                            G.consumeables:emplace(new_card)
+                            G.GAME.consumeable_buffer = 0
+                        return true
+                    end)}))
+                card_eval_status_text(self, 'extra', nil, nil, nil, {message = localize('k_plus_tarot'), colour = G.C.PURPLE})
+            end
+            return {
+                card = self
+            }
+        end
+    end
+}
+SMODS.Consumable {
+    set = 'Tarot',
+    loc_txt = {
         name = "The Eclipse",
         text = {
             "Converts up to",
             "{C:attention}3{} selected cards",
             "to {C:notes}Notes{}"
         }
-    }
+    },
+    key = 'eclipse',
+    config = { suit_conv = notes_suit.key, max_highlighted = 3 },
+    atlas = 'eclipse',
+    pos = { x = 0, y = 0 },
+    cost = 3,
+    unlocked = true,
+    discovered = false,
+    loc_vars = function(self)
+        return {
+            vars = {
+                self.config.max_highlighted,
+                localize(self.config.suit_conv, 'suits_plural'),
+                colours = { G.C.SUITS[self.config.suit_conv] },
+            },
+        }
+    end
+}
+SMODS.Back {
+    key = "musical_deck",
+    loc_txt = {
+        name = "Musical Deck",
+        text = {
+            "Start with a Deck",
+            "containing some ",
+            "{C:notes}Notes{} suit cards"
+        }
+    },
+    atlas = 'Decks',
+    pos = { x = 0, y = 0 },
+    config = {musical = true, atlas = "b_musical"},
+    apply = function(Self)
+        G.E_MANAGER:add_event(Event({
+            func = function()
+                for i = #G.playing_cards, 1, -1 do
+                    if i <= 13 then
+                        G.playing_cards[i]:change_suit(notes_suit.key)
+                    elseif i >= 14 then
+                        G.playing_cards[i]:start_dissolve(nil, true)
+                    end
+                end
+                return true
+            end
+        }))
+    end
+}
+SMODS.Blind {
+    key = 'void',
+    loc_txt = {
+        name = "The Deaf",
+        text = {
+            "All Note cards",
+            "are debuffed"
+        },
+    },
+    boss = { min = 1, max = 10 },
+    boss_colour = notes_suit.lc_colour,
+    debuff = { suit = notes_suit.key },
+    atlas = 'Blind',
+    pos = { x = 0, y = 1 },
+    in_pool = function(self, args)
+        return allow_suits
+    end
+}
 
-    local eclipse_tarot = SMODS.Tarot:new("The Eclipse", "eclipse_tarot", {suit_conv = 'Notes', max_highlighted = 3}, { x = 0, y = 0 }, eclipse_tarot_def, 3, 1.0, "Suit Conversion", true, true)
-    SMODS.Sprite:new("c_eclipse_tarot", musical_suit_mod.path, "c_eclipse_tarot.png", 71, 95, "asset_atli"):register();
-    eclipse_tarot:register()
-end
+-- --- Note Sounds
+-- SMODS.Sound({
+--     key = "note",
+--     path = "note.ogg"
+-- })
+
+-- local clickref = Card.click;
+-- function Card:click(change_context)
+--     if self.base.suit == notes_suit.key then
+--         local pitch = 0.5 + 0.1 * self.base.id
+--         play_sound("", pitch, 0.5)
+--     end
+--     clickref(self, change_context)
+-- end
+
+
 
 ----------------------------------------------
 ------------MOD CODE END---------------------
