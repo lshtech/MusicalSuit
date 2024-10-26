@@ -3,7 +3,7 @@
 --- MOD_ID: MusicalSuit
 --- MOD_AUTHOR: [itayfeder, elbe]
 --- MOD_DESCRIPTION: This mod add Notes suit.
---- PREFIX: music
+--- PREFIX: musical
 --- PRIORITY: 10
 
 ----------------------------------------------
@@ -165,9 +165,9 @@ SMODS.Back {
         G.E_MANAGER:add_event(Event({
             func = function()
                 for i = #G.playing_cards, 1, -1 do
-                    if i <= 13 then
+                    if i <= 26 then
                         G.playing_cards[i]:change_suit(notes_suit.key)
-                    elseif i >= 14 then
+                    elseif i >= 27 then
                         G.playing_cards[i]:start_dissolve(nil, true)
                     end
                 end
@@ -195,17 +195,17 @@ SMODS.Blind {
     end
 }
 
--- --- Note Sounds
--- SMODS.Sound({
+--- Note Sounds
+-- local musical_note = SMODS.Sound({
 --     key = "note",
---     path = "note.ogg"
+--     path = "meow1.ogg"
 -- })
 
 -- local clickref = Card.click;
 -- function Card:click(change_context)
 --     if self.base.suit == notes_suit.key then
 --         local pitch = 0.5 + 0.1 * self.base.id
---         play_sound("", pitch, 0.5)
+--         play_sound(musical_note.key, pitch, 0.5)
 --     end
 --     clickref(self, change_context)
 -- end
