@@ -21,8 +21,8 @@ SMODS.Atlas { key = 'modicon', path = 'ui_assets.png', px = 18, py = 18 }
 SMODS.Atlas { key = 'Decks', path = 'b_musical.png', px = 71, py = 95 }
 
 local function allow_suits(self, args)
-    if args and args.initial_deck and six_suits_mod then
-        return six_suits_mod.config.allow_all_suits
+    if args and args.initial_deck and SMODS.findModByID("SixSuits") then
+        return SMODS.findModByID("SixSuits").config.allow_all_suits
     end
     return true
 end
